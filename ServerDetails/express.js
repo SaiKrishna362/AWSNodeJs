@@ -174,7 +174,7 @@ app.post('/login', async (request, response) => {
                 }else{
                     
                     response.status(400);
-                    response.send({err_msg: err});            
+                    response.send({err_msg : 'Invalid User or Password'});            
                 
             };
             
