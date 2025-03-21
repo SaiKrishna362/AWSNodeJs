@@ -193,9 +193,13 @@ app.post('/signup', async (req, res) => {
     
     const client = await pool.connect()
 
+    const query = `INSERT INTO public.usermetadata("SNo", username, lastname, firstname, password) VALUES ($1 ,$2 ,$3 ,$4 ,$5);`
+    const preparedQuery = {
+        text: query,
+        values: [uuidv4(),username,lastname,firstname,hash]
+    };
 
-    client.query(`INSERT INTO public.usermetadata("SNo", username, lastname, firstname, password)
-	VALUES ('${uuidv4()}' ,'${username}' ,'${lastname}' ,'${firstname}' ,'${hash}' );`, async(err, reqquery) => {
+    client.query(preparedQuery, async(err, reqquery) => {
           if(reqquery !== undefined){
             console.log("Query Executed Successfully")
             res.send({status:'OK'})
