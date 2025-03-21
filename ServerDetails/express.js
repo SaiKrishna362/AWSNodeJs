@@ -1,3 +1,4 @@
+const dotenv = require("dotenv").config();
 const express = require('express');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
@@ -14,23 +15,61 @@ app.use(cors({
     methods: ["POST", "GET", "PUT", "UPDATE"]
 }))
 
-const pool = new Pool({
-    host:"localhost",
-    user:"postgres",
-    post:"5432",
-    password:"12345",
-    database:"CustomProject01",
-})
-  
-// const client = new Client({
+// const pool = new Pool({
 //     host:"localhost",
 //     user:"postgres",
-//     post:"5432",
+//     port:"5432",
 //     password:"12345",
 //     database:"CustomProject01",
-//   })
+// })
 
-//   client.connect()
+// const pool = new Pool({
+//     host: process.env.DB_HOST,
+//     user: process.env.DB_USER,
+//     password: process.env.DB_PASSWORD,
+//     database: process.env.DB_NAME,
+//     port: process.env.DB_PORT,
+//     dialect: "postgres",
+//     pool: {
+//       max: 5,
+//       min: 0,
+//       acquire: 30000,
+//       idle: 10000
+//     }
+// })
+  
+// const client = new Client({
+//     host:process.env.DB_HOST,
+//     user:process.env.DB_USER,
+//     post:process.env.DB_PORT,
+//     password:process.env.DB_PASSWORD,
+//     database:process.env.DB_NAME,
+//     // connectionString: process.env.POSTGRES_CONNECTION_STRING
+//   })
+console.log(process.env.POSTGRES_CONNECTION_STRING)
+const client = new Client({
+    // host:"localhost",
+    // user:"postgres",
+    // post:"5432",
+    // password:"12345",
+    // database:"CustomProject01",
+    //connectionString: process.env.POSTGRES_CONNECTION_STRING
+    connectionString: 'postgres://postgres:12345@localhost:5432/CustomProject01'
+  })
+
+  const pool = new Pool({
+    // host:"localhost",
+    // user:"postgres",
+    // post:"5432",
+    // password:"12345",
+    // database:"CustomProject01",
+    //connectionString: process.env.POSTGRES_CONNECTION_STRING
+    connectionString: 'postgres://postgres:12345@localhost:5432/CustomProject01'
+  })
+
+  client.connect()
+  .then(() => console.log('Connected to PostgresSQL'))
+  .catch((err) => console.log(`Connection error ${process.env.POSTGRES_CONNECTION_STRING}`, err.stack))
 
 
 const initializeDbAndServer = async () => {
@@ -68,22 +107,44 @@ const authenticateToken = (request, response, next) => {
     }
 };
 
-app.get('/user/:username', async (request, response)=> {
-    const {username}    =   request.params
-    const  client = await pool.connect();
 
-    client.query(`select *  FROM public.usermetadata nolock where username = '${username}';`,async (err, res)=> {
-
-        if(res.rows[0] !== undefined){
-            response.send({msg:'Invalid user'});
-        }else{
-            response.send({msg : 'New User'})
-            
-        } 
-      client.end()
-
+app.get('/', async (request,response)=>{
+    response.send({msg: 'Valid'})
 })
 
+app.get('/user/:username', async (request, response)=> {
+    const username    =   request.body.username
+    const  client = await pool.connect();
+
+    const query = "select *  FROM public.usermetadata nolock where username = $1;";
+    const preparedQuery = {
+        text: query,
+        values: [username]
+    };
+
+//     client.query(`select *  FROM public.usermetadata nolock where username = '${username}';`,async (err, res)=> {
+
+//         if(res.rows[0] !== undefined){
+//             response.send({msg:'Invalid user'});
+//         }else{
+//             response.send({msg : 'New User'})
+            
+//         } 
+//       client.end()
+
+// })
+
+        client.query(preparedQuery,async (err, res)=> {
+
+            if(res.rows[0] !== undefined){
+                response.send({msg:'Invalid user'});
+            }else{
+                response.send({msg : 'New User'})
+                
+            } 
+        client.end()
+
+})
 
 })
 

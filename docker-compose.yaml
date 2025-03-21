@@ -1,0 +1,81 @@
+
+version: '3.9'
+services:
+    backend:
+        build:
+            context: .
+            # container_name: nodejs_backend
+        ports:
+            - 5000:5000
+        environment:
+            - node_env=development
+            - POSTGRES_CONNECTION_STRING
+        networks:
+            - app-network
+
+    frontend:
+        build:
+            context: ../AWSNextJs
+            # container_name: reactjs_frontend
+        ports:
+            - 3000:3000
+        environment:
+            - REACT_APP_API_URL
+        networks:
+            - app-network
+
+networks:
+    app-network:
+        driver: bridge
+
+
+
+
+# version: '3.9'
+# services:
+#   db:
+#     image: postgres
+#     environment:
+#       - POSTGRES_PASSWORD:12345
+#        POSTGRES_USER:postgres
+#        POSTGRES_DB:CustomProject01
+#   app:
+#     image: my-node-app:1.0
+#     ports:
+#      - 5000:5000
+
+
+# version: '3.9'
+
+# services:
+#   postgresdb:
+#     image: postgres
+#     restart: unless-stopped
+#     env_file: ./.env
+#     environment:
+#       - POSTGRES_USER=$POSTGRESDB_USER
+#       - POSTGRES_PASSWORD=$POSTGRESDB_ROOT_PASSWORD
+#       - POSTGRES_DB=$POSTGRESDB_DATABASE
+#     ports:
+#       - $POSTGRESDB_LOCAL_PORT:$POSTGRESDB_DOCKER_PORT
+#     volumes:
+#       - db:/var/lib/postgres
+#   app:
+#     depends_on:
+#       - postgresdb
+#     build: .
+#     restart: unless-stopped
+#     env_file: ./.env
+#     ports:
+#       - 3000:3000
+#     environment:
+#       - DB_HOST=postgresdb
+#       - DB_USER=$POSTGRESDB_USER
+#       - DB_PASSWORD=$POSTGRESDB_ROOT_PASSWORD
+#       - DB_NAME=$POSTGRESDB_DATABASE
+#       - DB_PORT=$POSTGRESDB_DOCKER_PORT
+#     stdin_open: true
+#     tty: true
+
+# volumes: 
+#   db:
