@@ -155,8 +155,14 @@ app.post('/login', async (request, response) => {
     const jwt_token = jwt.sign(payLoad, `${jwtToken}`);
 
     const client = await pool.connect();
+
+    const query = "select *  FROM public.usermetadata nolock where username = $1;";
+    const preparedQuery = {
+        text: query,
+        values: [username]
+    };
  
-    client.query(`select *  FROM public.usermetadata nolock where username = '${username}';`,async (err, res)=> {
+    client.query(preparedQuery,async (err, res)=> {
         if(res.rows[0] === undefined){
             response.status(400)
             response.send({err_msg : 'Invalid User or Password'});
