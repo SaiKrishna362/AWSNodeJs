@@ -95,7 +95,7 @@ const authenticateToken = (request, response, next) => {
         response.status(401);
         response.send('Invalid JWT Token');        
     }else{
-        jwt.verify(jwtToken, "SECRET_KEY",async (error, payLoad) => {
+        jwt.verify(jwtToken, `${jwtToken}`,async (error, payLoad) => {
             if(error){
                 response.status(401);
                 response.send('Invalid JWT Token');
@@ -152,7 +152,7 @@ app.get('/user/:username', async (request, response)=> {
 app.post('/login', async (request, response) => {
     const {username, password} = request.body;
     const payLoad = {username};
-    const jwt_token = jwt.sign(payLoad, "SECRET_KEY");
+    const jwt_token = jwt.sign(payLoad, `${jwtToken}`);
 
     const client = await pool.connect();
  
