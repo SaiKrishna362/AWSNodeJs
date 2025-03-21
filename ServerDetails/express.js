@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const port = 5000;
 const app = express();
+app.disable('x-powered-by');
 app.use(express.json());
 const pg = require('pg')
 const { v4: uuidv4 } = require('uuid');
@@ -133,7 +134,7 @@ app.get('/user/:username', async (request, response)=> {
 //       client.end()
 
 // })
-
+        try{
         client.query(preparedQuery,async (err, res)=> {
 
             if(res.rows[0] !== undefined){
@@ -142,49 +143,93 @@ app.get('/user/:username', async (request, response)=> {
                 response.send({msg : 'New User'})
                 
             } 
-        client.end()
+})
+        } finally {
+            client.release(); // Ensures connection is closed properly
+        }
 
 })
 
-})
+const rateLimit = require("express-rate-limit");
 
-//API: Login User
-app.post('/login', async (request, response) => {
-    const {username, password} = request.body;
-    const payLoad = {username};
-    const jwt_token = jwt.sign(payLoad, `${jwtToken}`);
+// Limit login attempts per IP
+const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5, // Allow only 5 login attempts per 15 minutes per IP
+    message: { err_msg: "Too many login attempts. Please try again later." },
+    headers: true,
+});
 
-    const client = await pool.connect();
+// Apply rate limiting to login route
+app.post('/login', loginLimiter, async (request, response) => {
+    const { username, password } = request.body;
+    const payLoad = { username };
 
-    const query = "select *  FROM public.usermetadata nolock where username = $1;";
-    const preparedQuery = {
-        text: query,
-        values: [username]
-    };
- 
-    client.query(preparedQuery,async (err, res)=> {
-        if(res.rows[0] === undefined){
-            response.status(400)
-            response.send({err_msg : 'Invalid User or Password'});
-        }else{
+    try {
+        const client = await pool.connect();
+        const query = "SELECT * FROM public.usermetadata WHERE username = $1;";
+        const preparedQuery = { text: query, values: [username] };
+
+        const res = await client.query(preparedQuery);
+        client.release();
+
+        if (!res.rows.length) {
+            return response.status(400).send({ err_msg: 'Invalid User or Password' });
+        }
+
+        const isPasswordMatches = await bcrypt.compare(password, res.rows[0].password);
+        if (isPasswordMatches) {
+            const jwt_token = jwt.sign(payLoad, process.env.JWT_SECRET);
+            response.send({ jwt_token });
+        } else {
+            response.status(400).send({ err_msg: 'Invalid User or Password' });
+        }
+    } catch (error) {
+        console.error('Login Error:', error);
+        response.status(500).send({ err_msg: 'Internal Server Error' });
+    }
+});
+
+
+// //API: Login User
+// app.post('/login', async (request, response) => {
+//     const {username, password} = request.body;
+//     const payLoad = {username};
+//     const jwt_token = jwt.sign(payLoad, `${jwtToken}`);
+
+//     const client = await pool.connect();
+
+//     const query = "select *  FROM public.usermetadata nolock where username = $1;";
+//     const preparedQuery = {
+//         text: query,
+//         values: [username]
+//     };
+//     try{
+//     client.query(preparedQuery,async (err, res)=> {
+//         if(res.rows[0] === undefined){
+//             response.status(400)
+//             response.send({err_msg : 'Invalid User or Password'});
+//         }else{
            
-            const isPasswordMatches = await bcrypt.compare(password, res.rows[0].password)
-                if(isPasswordMatches){
-                    response.send({jwt_token});
-                }else{
+//             const isPasswordMatches = await bcrypt.compare(password, res.rows[0].password)
+//                 if(isPasswordMatches){
+//                     response.send({jwt_token});
+//                 }else{
                     
-                    response.status(400);
-                    response.send({err_msg : 'Invalid User or Password'});            
+//                     response.status(400);
+//                     response.send({err_msg : 'Invalid User or Password'});            
                 
-            };
+//             };
             
-        } 
-      client.end()
-    })
+//         } 
+//          })
+//         } finally {
+//             client.release(); // Ensures connection is closed properly
+//         }
   
 
     
-});
+// });
 
 app.post('/signup', async (req, res) => {
     const {username, lastname, firstname, password} = req.body 
@@ -199,6 +244,8 @@ app.post('/signup', async (req, res) => {
         values: [uuidv4(),username,lastname,firstname,hash]
     };
 
+    try{
+
     client.query(preparedQuery, async(err, reqquery) => {
           if(reqquery !== undefined){
             console.log("Query Executed Successfully")
@@ -206,10 +253,13 @@ app.post('/signup', async (req, res) => {
           }
           else{
             console.log(err)
-            res.send(err)
+            res.send({err_msg : 'Error Occured'})
           }
 
     })
+} finally {
+    client.release(); // Ensures connection is closed properly
+}
 
 })
 
